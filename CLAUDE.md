@@ -28,8 +28,17 @@ Next.js (App Router) · TypeScript (strict) · Tailwind CSS · Vitest · ws · t
 - `pnpm dev` — Next.js 개발 서버
 - `pnpm build && pnpm start` — 프로덕션 빌드 (성능 측정은 반드시 이걸로)
 - `pnpm mock` — Mock 시세 서버 (기본 `ws://localhost:8787`)
-- `pnpm relay` — KIS 중계 서버 (T10 이후)
+- `pnpm relay` — KIS 중계 서버 (C1 이후)
+- `API_MOCK=1 pnpm build && API_MOCK=1 pnpm start` — SSR 부하 테스트용 실행
+- `docker compose -f docker-compose.monitoring.yml up` — Prometheus + Grafana
+- `k6 run load/ssr-load.js` / `k6 run load/ws-load.js` — 부하 테스트
 - `pnpm test` / `pnpm typecheck` / `pnpm lint`
+
+## 세 관점
+- A. 브라우저 부하: Mock 시세 서버로 데이터 폭주 → 화면·주문 반응 측정
+- B. FE 서버 부하: k6 + API 모킹으로 SSR 서버 한계 측정, Grafana로 관찰
+- C. 실제 연결: KIS 실시간 시세 + 백그라운드 해제 / 포그라운드 재연결
+- 부하 테스트는 내가 운영하는 서버(Mock, Next, 중계)에만 한다. KIS 서버에는 절대 부하를 주지 않는다.
 
 ## 코드 컨벤션
 - 시세 관련 순수 로직(파싱, 배칭 적용, 지표 계산)은 `src/lib`에 두고 UI와 분리하며, 단위 테스트를 작성한다.
