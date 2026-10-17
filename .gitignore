@@ -1,0 +1,17 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# claude code personal settings
+.claude/settings.local.json
+
+node_modules/
+dist/
+
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# macOS
+.DS_Store
