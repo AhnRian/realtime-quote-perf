@@ -2,7 +2,7 @@
 
 ## 조건
 - 빌드: 프로덕션 (`pnpm build && pnpm start`)
-- 브라우저: Chrome ___ / CPU 4x 쓰로틀링
+- 브라우저: Chrome ___ / CPU 20x 쓰로틀링 (spec 5.5)
 - 기기: ___
 - 종목 30개, seed=42, 각 30초
 

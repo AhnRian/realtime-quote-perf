@@ -32,7 +32,7 @@
 | FR-4 | 가격 변동 시 상승 빨강·하락 파랑 깜빡임 | A |
 | FR-5 | 렌더링 모드 `?mode=naive\|batched\|optimized\|visible` | A |
 | FR-6 | 데이터 소스 `?source=mock\|kis\|worker\|replay` (기본 mock) | A·C |
-| FR-7 | 측정 패널 + 30초 측정 + JSON 복사 + `?autoclick=1` | A |
+| FR-7 | 측정 패널 + 30초 측정 + JSON 복사 + `?autoclick=1` (주문 반응 시간 정의는 5.4) | A |
 | FR-8 | 매수 버튼 → 주문 확인 패널, 지연 경고, 중복 클릭 방지 | A |
 | FR-9 | 연결 상태 배지 + 지수 백오프 재연결 + 3초 지연 표시 | C |
 | FR-10 | 백그라운드 60초 후 구독 해제·연결 종료, 복귀 시 즉시 재연결 + REST 스냅샷 | C |
@@ -126,15 +126,24 @@ type ConnectionState = 'connected' | 'refreshing' | 'reconnecting' | 'disconnect
 - 주문은 자동 재시도하지 않는다 (응답 없음 → 상태 조회로 확인하는 구조만 표시)
 
 ### 5.4 감지
-- 측정 패널: FPS, 초당 렌더 수, Long Task 개수/총 시간, 표시 지연 p50/p95, **주문 반응 시간 p50/p95** (Event Timing API), 초당 수신 건수
-- `?autoclick=1`: 측정 중 매수 버튼을 일정 간격으로 자동 클릭 (모드 간 공정 비교)
-- "30초 측정" 버튼 → `{ mode, rate, fps, renders, longTasks, longTaskMs, p50, p95, inpP50, inpP95 }` JSON 복사
+- 측정 패널: FPS, 초당 렌더 수, Long Task 개수/총 시간, 표시 지연 p50/p95, **주문 반응 시간 p50/p95**, 초당 수신 건수
+- **주문 반응 시간** = 클릭 시각(T0) → 주문 확인 패널이 그려진 직후(T3)
+  - T0: 자동 클릭은 "클릭 예정 시각", 수동 클릭은 `event.timeStamp`
+  - T3: 패널 커밋 직후 `requestAnimationFrame` → `setTimeout(0)` 콜백 시각 (다음 paint 직후 근사)
+  - 메인 스레드가 시세 처리로 바빠 클릭이 늦게 실행되는 대기 시간까지 포함된다
+  - Event Timing API를 쓰지 않는 이유: 실제 사용자 입력(`isTrusted`)만 기록해서 자동 클릭 비교 측정에 쓸 수 없다. 수동 클릭 시에는 Event Timing 값을 참고용으로 함께 기록한다
+  - INP와 정의가 다르므로 지표 이름은 `order`를 쓴다 (`inp` 금지)
+  - 한계: 자동 클릭에는 실제 입력 처리 경로(터치 → 컴포지터 → 메인 스레드)가 빠져 실제 INP보다 약간 짧게 나온다
+- `?autoclick=1`: 측정 중 500ms마다 매수 버튼 자동 클릭 → 패널 닫기 (모드 간 공정 비교)
+- "30초 측정" 버튼 → `{ mode, source, rate, fps, fpsMin, renders, messages, longTasks, longTaskMs, p50, p95, orderP50, orderP95 }` JSON 복사
 - 렌더 카운터는 행 컴포넌트 렌더 함수 안 전역 카운터 (Profiler는 프로덕션 빌드에서 동작 안 함)
 - **Sentry**: 브라우저 에러와 릴리스 버전 기록
 - 브라우저 지표(주문 반응 p95, 표시 지연 p95)를 `/api/vitals`로 전송 → Prometheus 지표로 노출
 
 ### 5.5 측정 조건
-- `pnpm build && pnpm start`, Chrome 시크릿 창, CPU 4x 쓰로틀링, 탭은 앞에 띄워 둠
+- `pnpm build && pnpm start`, Chrome 시크릿 창, **CPU 20x 쓰로틀링**, 탭은 앞에 띄워 둠
+  - 4x에서는 이 기기(M 시리즈 Mac)에서 naive도 rate 2000까지 60fps라 모드 간 차이가 재현되지 않았다 (results.md 사전 탐색 1). 4x 결과는 "차이 없음" 참고값으로 함께 남긴다
+  - DevTools에 기기 보정 프리셋(저사양/중급 휴대폰)이 있으면 그 배수를 기록해 근거로 쓴다
 - 종목 30개, seed=42, rate 50(평소) / 200(장 초반) / 500(스트레스), 각 30초, 2~3회 중간값
 - burst=1 시나리오 별도 측정
 
@@ -190,7 +199,7 @@ type ConnectionState = 'connected' | 'refreshing' | 'reconnecting' | 'disconnect
 - 부하 테스트는 내가 운영하는 서버(Mock, Next, 중계)에만 한다. KIS 서버에 부하 테스트 금지
 
 ## 9. 수용 기준 (전체)
-- [ ] A: rate 200·CPU 4x에서 optimized가 naive보다 FPS가 높고 주문 반응 p95가 낮다
+- [ ] A: rate 200·CPU 20x에서 optimized가 naive보다 FPS가 높고 주문 반응 p95(`orderP95`)가 낮다
 - [ ] A: 시세 지연 시 주문 패널에 경고가 뜨고, 중복 클릭이 막힌다
 - [ ] B: k6로 Next 서버 1개의 한계(기준을 지키는 최대 초당 요청 수)를 찾았다
 - [ ] B: Grafana에서 SSR 응답 p95와 브라우저 주문 반응 p95를 볼 수 있다
