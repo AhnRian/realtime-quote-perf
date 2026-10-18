@@ -50,6 +50,26 @@ export type MockParams = {
   seed: number;
 };
 
+export type NewsItem = {
+  id: number;
+  title: string;
+  source: string;
+  /** ISO 8601 */
+  publishedAt: string;
+};
+
+/** SSR 종목 상세 페이지 데이터 (spec 6.1) */
+export type StockDetail = {
+  code: string;
+  name: string;
+  quote: Tick;
+  book: OrderBook;
+  /** 최근 체결 50건, 최신이 앞 */
+  trades: Tick[];
+  /** 관련 뉴스 20건, 최신이 앞 */
+  news: NewsItem[];
+};
+
 /** 30초 측정 결과 (spec 10장) */
 export type MeasureResult = {
   mode: RenderMode;

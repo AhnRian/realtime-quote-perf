@@ -11,19 +11,19 @@
 
 ### S0. 사전 준비 (사람) ⭐
 - [x] KIS 모의투자 앱키 발급
-- [ ] `.env.local` 작성, `.gitignore`에 `.env*.local` 확인
-- [ ] `.claude/settings.json`으로 `.env` 읽기 차단
+- [x] `.env.local` 작성, `.gitignore`에 `.env*.local` 확인 (`.env.*` 패턴으로 포함)
+- [x] `.claude/settings.json`으로 `.env` 읽기 차단
 
 ### S1. 프로젝트 세팅 ⭐
 - Next.js(App Router) + TS strict + Tailwind + Vitest + tsx + ws
-- [ ] `pnpm dev / build / start / mock / test / typecheck / lint` 동작
+- [x] `pnpm dev / build / start / mock / test / typecheck / lint` 동작
 
 ### S2. 타입 · 파서 · KIS 필드 상수 ⭐
-- [ ] H0STCNT0 단건·다건, H0STASP0 파싱 테스트
-- [ ] 제어 메시지(JSON), 알 수 없는 TR, 깨진 문자열은 예외 없이 처리
+- [x] H0STCNT0 단건·다건, H0STASP0 파싱 테스트
+- [x] 제어 메시지(JSON), 알 수 없는 TR, 깨진 문자열은 예외 없이 처리
 
 ### S3. Mock 생성기 + Mock 서버 ⭐ (spec 5.1)
-- [ ] seed 재현성, 생성 원문을 파서가 파싱 (테스트)
+- [x] seed 재현성, 생성 원문을 파서가 파싱 (테스트)
 - [ ] rate / burst / 인기 종목 쏠림 / 다건 메시지 / broadcast 모드
 - [ ] 1초마다 접속 수·전송 건수 출력
 
@@ -32,24 +32,24 @@
 ## A. 브라우저 부하
 
 ### A1. 화면 (naive) ⭐
-- [ ] 종목 리스트, 10단 호가, 최근 체결, 깜빡임, `?mode` 처리
+- [x] 종목 리스트, 10단 호가, 최근 체결, 깜빡임, `?mode` 처리
 - [ ] 매수 버튼 → 주문 확인 패널 (API 호출 없음)
 
 ### A2. 측정 패널 ⭐ (spec 5.4)
 - [ ] FPS, 렌더 수, Long Task, 표시 지연 p50/p95, 주문 반응 p50/p95, 수신 건수
 - [ ] `?autoclick=1`, 30초 측정 → JSON 복사
-- [ ] 프로덕션 빌드에서 동작
+- [x] 프로덕션 빌드에서 동작
 
 ### A3. naive 측정 (사람 + Claude) ⭐
 - [ ] rate 50 / 200 / 500 + burst, `docs/results.md` 기록
 
 ### A4. batched ⭐
-- [ ] rAF 배칭, 같은 종목은 최신값만 (테스트)
+- [x] rAF 배칭, 같은 종목은 최신값만 (테스트)
 - [ ] 측정 후 기록
 
 ### A5. optimized ⭐
-- [ ] 종목별 구독 + memo + CSS 깜빡임 + 링 버퍼 + tabular-nums
-- [ ] 한 종목만 바뀌면 그 행만 렌더 (카운터로 확인)
+- [x] 종목별 구독 + memo + CSS 깜빡임 + 링 버퍼 + tabular-nums (깜빡임은 측정 결과에 따라 CSS 애니메이션 대신 클래스 토글, results.md 사전 탐색 2·3 참고)
+- [x] 한 종목만 바뀌면 그 행만 렌더 (카운터로 확인)
 - [ ] 측정 후 기록, spec 9 A 기준 충족
 
 ### A6. 주문 안정성 ⭐ (spec 5.3)
@@ -67,8 +67,8 @@
 ## B. FE 서버 부하 (SSR)
 
 ### B1. SSR 종목 상세 + API 모킹 ⭐ (spec 6.1, 6.2)
-- [ ] `/stocks/[code]` 서버 렌더
-- [ ] `API_MOCK=1`이면 fixtures + 50ms 지연, 백엔드 호출 없음 (테스트)
+- [x] `/stocks/[code]` 서버 렌더
+- [x] `API_MOCK=1`이면 fixtures + 50ms 지연, 백엔드 호출 없음 (테스트)
 
 ### B2. 지표 노출 + 모니터링 ⭐ (spec 6.3)
 - [ ] `/api/metrics` (SSR 렌더 시간 히스토그램, 요청 수, 프로세스 지표)
@@ -95,7 +95,7 @@
 
 ### C1. KIS 중계 서버 ⭐ (spec 7.1)
 - [ ] 접속키 발급(재사용), 구독/해제 대행, PINGPONG 응답, 내부 프레임 전달
-- [ ] 키·접속키가 로그와 번들에 없음
+- [x] 키·접속키가 로그와 번들에 없음
 - [ ] 장중에 `?source=kis`로 실데이터 표시 (스크린샷)
 
 ### C2. 백그라운드 / 포그라운드 재연결 ⭐ (spec 7.2)
