@@ -58,6 +58,7 @@
 
 ### A7. Sentry 연동 ⭐
 - [ ] 브라우저 에러 + 릴리스 버전 기록, 테스트 에러 1건 발생시켜 대시보드에서 확인 (스크린샷)
+  - 연동·테스트 에러는 완료: 프로젝트 `sonsaju/kis-mts`, 이슈 KIS-MTS-1, release `kis-mts@74bc872` (Sentry API로 확인). 남은 것: 대시보드 스크린샷 (사람)
 
 ### A8. visible 모드 ○
 - [ ] Intersection Observer로 보이는 행만 갱신, 종목 100개로 optimized와 비교

@@ -76,6 +76,19 @@ export function PerfPanel({ mode, source, rate, autoclick }: Props) {
       >
         {measure.status === "running" ? `측정 중… ${measure.remainingSec}s` : "30초 측정"}
       </button>
+      <button
+        type="button"
+        data-sentry-test
+        onClick={() => {
+          // A7: Sentry 연동 확인용 테스트 에러 (잡히지 않은 예외로 던져서 전역 핸들러가 보내게 한다)
+          setTimeout(() => {
+            throw new Error(`Sentry 테스트 에러 (mode=${mode}, ${new Date().toISOString()})`);
+          }, 0);
+        }}
+        className="mt-1 w-full rounded border border-neutral-700 py-0.5 text-neutral-400 hover:bg-neutral-800"
+      >
+        Sentry 테스트 에러
+      </button>
       {resultJson && (
         <div className="mt-2">
           <pre data-testid="measure-result" className="break-all whitespace-pre-wrap text-neutral-300">
