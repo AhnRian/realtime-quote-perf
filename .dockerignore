@@ -10,3 +10,4 @@ load/results
 recordings
 docs
 *.tsbuildinfo
+.kis-cache

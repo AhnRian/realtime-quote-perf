@@ -1,4 +1,4 @@
-import { TRADE_LIMIT, flashDirection, type FlashDir, type MarketState } from "./market-state";
+import { TRADE_LIMIT, flashDirection, isTrade, type FlashDir, type MarketState } from "./market-state";
 import type { MarketEvent, OrderBook, Tick } from "./types";
 
 // batched 모드: 메시지를 버퍼에 쌓았다가 프레임마다 한 번에 반영한다 (spec 9장).
@@ -17,7 +17,7 @@ export function createBatch(): Batch {
 }
 
 export function isBatchEmpty(batch: Batch): boolean {
-  return batch.trades.length === 0 && batch.books.size === 0;
+  return batch.quotes.size === 0 && batch.trades.length === 0 && batch.books.size === 0;
 }
 
 /** 버퍼에 이벤트 추가 (버퍼는 ref에 있는 가변 객체라 직접 수정한다) */
@@ -27,12 +27,18 @@ export function addToBatch(batch: Batch, event: MarketEvent): void {
     return;
   }
   batch.quotes.set(event.tick.code, event.tick);
-  batch.trades.push(event.tick);
+  if (isTrade(event.tick)) batch.trades.push(event.tick);
 }
 
 /** 화면에 실제로 반영되는 메시지의 sentAt (표시 지연 측정용). 덮어써진 호가는 제외 */
 export function batchSentAts(batch: Batch): number[] {
-  return [...batch.trades.map((t) => t.sentAt), ...[...batch.books.values()].map((b) => b.sentAt)];
+  // 체결 리스트에 들어가지 않는 시세(REST 스냅샷)는 최신값만 센다
+  const snapshotQuotes = [...batch.quotes.values()].filter((t) => !isTrade(t));
+  return [
+    ...batch.trades.map((t) => t.sentAt),
+    ...snapshotQuotes.map((t) => t.sentAt),
+    ...[...batch.books.values()].map((b) => b.sentAt),
+  ];
 }
 
 /** 버퍼 전체를 한 번의 불변 업데이트로 반영 */

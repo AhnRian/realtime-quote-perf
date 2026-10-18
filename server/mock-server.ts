@@ -1,5 +1,6 @@
 import { WebSocketServer, WebSocket } from "ws";
 import { createMockGenerator, type MockGenerator } from "../src/lib/mock-generator";
+import { parseClientMessage } from "../src/lib/parser";
 import { parseMockParams, toMockQuery } from "../src/lib/query";
 import type { Frame, MockParams } from "../src/lib/types";
 
@@ -44,8 +45,8 @@ function isBurst(stream: Stream): boolean {
   return stream.params.burst && Date.now() - stream.startedAt < BURST_MS;
 }
 
-function sendRaw(stream: Stream, raw: string, only?: WebSocket) {
-  const frame: Frame = { t: Date.now(), raw };
+function sendRaw(stream: Stream, raw: string, only?: WebSocket, snapshot = false) {
+  const frame: Frame = snapshot ? { t: Date.now(), raw, s: 1 } : { t: Date.now(), raw };
   // 프레임 직렬화는 한 번만 하고 모든 클라이언트에 같은 문자열을 보낸다
   const data = JSON.stringify(frame);
   for (const ws of only ? [only] : stream.clients) {
@@ -98,11 +99,19 @@ wss.on("connection", (ws, req) => {
   } else {
     stream = createStream(params, null);
     // 접속 직후 화면을 채우기 위해 전 종목 체결·호가 1건씩 (broadcast는 생략: 이미 흐르는 스트림에 합류)
-    for (const raw of stream.generator.snapshot()) sendRaw(stream, raw, ws);
+    for (const raw of stream.generator.snapshot()) sendRaw(stream, raw, ws, true);
   }
   stream.clients.add(ws);
   if (stream.clients.size === 1) console.log(`[mock] 스트림 #${stream.id} 시작${broadcast ? " (broadcast)" : ""}`, params);
 
+  ws.on("message", (data) => {
+    const msg = parseClientMessage(data.toString());
+    // 연결을 유지한 채 복귀한 브라우저: 최신값을 스냅샷으로 다시 보낸다 (spec 7.2)
+    if (msg?.type === "snapshot" && !broadcast) {
+      for (const raw of stream.generator.snapshot()) sendRaw(stream, raw, ws, true);
+    }
+    // subscribe·unsubscribe: Mock은 접속 단위로 전 종목을 보내므로 받기만 한다
+  });
   ws.on("close", () => removeClient(stream, ws));
 });
 

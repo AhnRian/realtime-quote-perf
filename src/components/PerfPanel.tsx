@@ -8,6 +8,7 @@ import {
   type LiveStats,
   type MeasureState,
 } from "@/lib/perf-recorder";
+import { getReconnectStats, type ReconnectStats } from "@/lib/market-socket";
 import type { DataSource, RenderMode } from "@/lib/types";
 
 // 측정 패널 오버레이. 앱 컴포넌트 트리 밖(page.tsx의 형제)에 두어
@@ -17,6 +18,7 @@ type Props = { mode: RenderMode; source: DataSource; rate: number | null; autocl
 
 export function PerfPanel({ mode, source, rate, autoclick }: Props) {
   const [live, setLive] = useState<LiveStats | null>(null);
+  const [reconnect, setReconnect] = useState<ReconnectStats | null>(null);
   const [measure, setMeasure] = useState<MeasureState>({ status: "idle" });
   const [copied, setCopied] = useState(false);
 
@@ -25,6 +27,7 @@ export function PerfPanel({ mode, source, rate, autoclick }: Props) {
       subscribePerf((nextLive, nextMeasure) => {
         setLive(nextLive);
         setMeasure(nextMeasure);
+        setReconnect(getReconnectStats());
       }),
     [],
   );
@@ -54,6 +57,13 @@ export function PerfPanel({ mode, source, rate, autoclick }: Props) {
         <Stat label="주문 반응 p95" value={live ? `${live.orderP95}ms` : undefined} />
       </dl>
       {autoclick && <p className="mt-1 text-neutral-500">autoclick: 측정 중 0.5초마다 매수 패널 자동 열기</p>}
+      {reconnect && (reconnect.lastSnapshotMs !== null || reconnect.lastRealtimeMs !== null) && (
+        <p data-testid="reconnect-stats" className="mt-1 text-neutral-400">
+          복귀 → 스냅샷 {reconnect.lastSnapshotMs ?? "-"}ms · 첫 실시간 {reconnect.lastRealtimeMs ?? "-"}ms
+          <br />
+          숨김 중 수신 {reconnect.hiddenMessages}건{reconnect.disconnectedWhileHidden ? " (60초 후 연결 종료)" : ""}
+        </p>
+      )}
       <button
         type="button"
         disabled={measure.status === "running"}

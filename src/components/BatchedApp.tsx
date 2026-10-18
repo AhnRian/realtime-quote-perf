@@ -16,7 +16,7 @@ import {
   type Flash,
 } from "@/lib/apply-batch";
 import { EMPTY_MARKET, type FlashDir, type MarketState } from "@/lib/market-state";
-import { connectMarket, marketSymbols, marketUrl, type ConnectionStatus } from "@/lib/market-socket";
+import { connectMarket, marketSymbols, marketUrl, type ConnectionState } from "@/lib/market-socket";
 import { recordLatencies } from "@/lib/perf-recorder";
 import type { DataSource, MockParams } from "@/lib/types";
 
@@ -32,7 +32,7 @@ export function BatchedApp({ source, params }: { source: DataSource; params: Moc
   const symbols = useMemo(() => marketSymbols(source, params), [source, params]);
   const [view, setView] = useState(EMPTY_VIEW);
   const [selected, setSelected] = useState(symbols[0]?.code ?? "");
-  const [status, setStatus] = useState<ConnectionStatus>("connecting");
+  const [status, setStatus] = useState<ConnectionState>("reconnecting");
   const [order, setOrder] = useState<OrderOpen>(null);
   const pendingSentAt = useRef<number[]>([]);
 
@@ -61,7 +61,7 @@ export function BatchedApp({ source, params }: { source: DataSource; params: Moc
     };
     raf = requestAnimationFrame(frame);
 
-    const disconnect = connectMarket(marketUrl(source, params), {
+    const disconnect = connectMarket(marketUrl(source, params), symbols.map((s) => s.code), {
       onStatus: setStatus,
       onEvents: (events) => {
         for (const event of events) addToBatch(batch, event);
@@ -71,7 +71,7 @@ export function BatchedApp({ source, params }: { source: DataSource; params: Moc
       cancelAnimationFrame(raf);
       disconnect();
     };
-  }, [source, params]);
+  }, [source, params, symbols]);
 
   const flashDirs = useMemo(() => {
     const dirs: Record<string, FlashDir> = {};

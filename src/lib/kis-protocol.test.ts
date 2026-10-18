@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildSubscribeMessage, classifyKisMessage, extractApprovalKey, parseKisEnv } from "./kis-protocol";
+import {
+  buildSubscribeMessage,
+  classifyKisMessage,
+  extractApprovalKey,
+  parseKisEnv,
+  parseRestQuote,
+  rawCode,
+  restQuoteToRaw,
+} from "./kis-protocol";
+import { parseRaw } from "./parser";
 
 describe("kis-protocol", () => {
   it("구독 요청 메시지를 만든다", () => {
@@ -45,6 +54,32 @@ describe("kis-protocol", () => {
     expect(extractApprovalKey({ approval_key: "abc" })).toBe("abc");
     expect(extractApprovalKey({ error_code: "EGW" })).toBeNull();
     expect(extractApprovalKey(null)).toBeNull();
+  });
+
+  it("원문에서 종목코드를 꺼낸다", () => {
+    expect(rawCode("0|H0STCNT0|001|005930^093354^71900")).toBe("005930");
+    expect(rawCode("0|H0STCNT0|001|")).toBeNull();
+    expect(rawCode("garbage")).toBeNull();
+  });
+
+  it("REST 현재가를 H0STCNT0 원문으로 바꾸면 파서가 그대로 읽는다", () => {
+    const quote = parseRestQuote({
+      rt_cd: "0",
+      msg1: "정상처리 되었습니다.",
+      output: { stck_prpr: "71900", prdy_vrss: "-500", prdy_vrss_sign: "5", prdy_ctrt: "-0.69", acml_vol: "1234567" },
+    });
+    expect(quote).not.toBeNull();
+    const raw = restQuoteToRaw("005930", quote!, "101500");
+    const [event] = parseRaw(raw, 1) ?? [];
+    expect(event).toEqual({
+      type: "tick",
+      tick: { code: "005930", time: "101500", price: 71900, change: -500, rate: -0.69, tradeVol: 0, accVol: 1234567, sentAt: 1 },
+    });
+  });
+
+  it("REST 오류 응답이나 깨진 필드는 null", () => {
+    expect(parseRestQuote({ rt_cd: "1", msg1: "초당 거래건수를 초과하였습니다." })).toBeNull();
+    expect(parseRestQuote({ rt_cd: "0", output: { stck_prpr: "abc" } })).toBeNull();
   });
 
   it("KIS_ENV 기본값은 모의투자", () => {

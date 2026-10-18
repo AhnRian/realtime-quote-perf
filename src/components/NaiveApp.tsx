@@ -7,7 +7,7 @@ import { BuyButton, OrderDialog, type OrderOpen } from "@/components/OrderTicket
 import { StockTable } from "@/components/StockTable";
 import { TradeList } from "@/components/TradeList";
 import { EMPTY_MARKET, applyEvent, flashDirection, type FlashDir } from "@/lib/market-state";
-import { connectMarket, marketSymbols, marketUrl, type ConnectionStatus } from "@/lib/market-socket";
+import { connectMarket, marketSymbols, marketUrl, type ConnectionState } from "@/lib/market-socket";
 import { recordLatencies } from "@/lib/perf-recorder";
 import type { DataSource, MockParams } from "@/lib/types";
 
@@ -22,7 +22,7 @@ export function NaiveApp({ source, params }: { source: DataSource; params: MockP
   const [market, setMarket] = useState(EMPTY_MARKET);
   const [flashes, setFlashes] = useState<Record<string, FlashDir | undefined>>({});
   const [selected, setSelected] = useState(symbols[0]?.code ?? "");
-  const [status, setStatus] = useState<ConnectionStatus>("connecting");
+  const [status, setStatus] = useState<ConnectionState>("reconnecting");
   // 주문 패널 열림도 페이지 state 하나에 둔다 (naive 방식: 열 때 페이지 전체가 다시 렌더)
   const [order, setOrder] = useState<OrderOpen>(null);
   const lastPrice = useRef<Record<string, number>>({});
@@ -38,7 +38,7 @@ export function NaiveApp({ source, params }: { source: DataSource; params: MockP
   });
 
   useEffect(() => {
-    return connectMarket(marketUrl(source, params), {
+    return connectMarket(marketUrl(source, params), symbols.map((s) => s.code), {
       onStatus: setStatus,
       onEvents: (events) => {
         for (const event of events) {
@@ -61,7 +61,7 @@ export function NaiveApp({ source, params }: { source: DataSource; params: MockP
         }
       },
     });
-  }, [source, params]);
+  }, [source, params, symbols]);
 
   const selectedName = symbols.find((s) => s.code === selected)?.name ?? selected;
 

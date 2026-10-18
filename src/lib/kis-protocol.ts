@@ -1,4 +1,6 @@
-// KIS 웹소켓 프로토콜 처리 (중계 서버용 순수 함수, spec 12장)
+import { TICK_FIELD, TICK_FIELD_COUNT, TR_TICK } from "./kis-fields";
+
+// KIS 웹소켓 프로토콜 처리 (중계 서버용 순수 함수, spec 7.1)
 
 export type KisEnv = "paper" | "real";
 
@@ -50,6 +52,50 @@ export function classifyKisMessage(text: string): KisMessage {
     ok: str(field(body, "rt_cd")) === "0",
     message: str(field(body, "msg1")),
   };
+}
+
+/** 실시간 원문에서 종목코드 추출 (구독한 브라우저에게만 보내기 위해) */
+export function rawCode(raw: string): string | null {
+  const body = raw.split("|")[3];
+  const code = body?.split("^", 1)[0];
+  return code && /^[0-9A-Z]{6}$/.test(code) ? code : null;
+}
+
+/** REST 현재가 조회 (FHKST01010100) 응답에서 쓰는 필드 */
+export type RestQuote = {
+  stck_prpr: string; // 현재가
+  prdy_vrss: string; // 전일대비
+  prdy_vrss_sign: string; // 전일대비부호
+  prdy_ctrt: string; // 전일대비율
+  acml_vol: string; // 누적거래량
+};
+
+export function parseRestQuote(json: unknown): RestQuote | null {
+  const output = field(json, "output");
+  if (str(field(json, "rt_cd")) !== "0" || typeof output !== "object" || output === null) return null;
+  const keys = ["stck_prpr", "prdy_vrss", "prdy_vrss_sign", "prdy_ctrt", "acml_vol"] as const;
+  const values = keys.map((k) => str(field(output, k)));
+  if (values.some((v) => v === "" || (v !== values[2] && !Number.isFinite(Number(v))))) return null;
+  const [stck_prpr, prdy_vrss, prdy_vrss_sign, prdy_ctrt, acml_vol] = values as [string, string, string, string, string];
+  return { stck_prpr, prdy_vrss, prdy_vrss_sign, prdy_ctrt, acml_vol };
+}
+
+/**
+ * REST 현재가를 H0STCNT0 원문 1건으로 바꾼다.
+ * 브라우저는 소스와 상관없이 같은 내부 프레임만 받으므로, 스냅샷도 실시간 원문 형식으로 맞춘다.
+ * 체결량은 알 수 없으므로 0.
+ */
+export function restQuoteToRaw(code: string, quote: RestQuote, hhmmss: string): string {
+  const f = Array<string>(TICK_FIELD_COUNT).fill("0");
+  f[TICK_FIELD.CODE] = code;
+  f[TICK_FIELD.TIME] = hhmmss;
+  f[TICK_FIELD.PRICE] = String(Math.abs(Number(quote.stck_prpr)));
+  f[TICK_FIELD.SIGN] = quote.prdy_vrss_sign;
+  f[TICK_FIELD.CHANGE] = quote.prdy_vrss;
+  f[TICK_FIELD.RATE] = quote.prdy_ctrt;
+  f[TICK_FIELD.TRADE_VOL] = "0";
+  f[TICK_FIELD.ACC_VOL] = quote.acml_vol;
+  return `0|${TR_TICK}|001|${f.join("^")}`;
 }
 
 /** 접속키 발급 응답에서 approval_key 추출 */

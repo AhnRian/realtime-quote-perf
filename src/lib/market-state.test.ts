@@ -37,6 +37,18 @@ describe("applyEvent", () => {
   });
 });
 
+describe("REST 스냅샷 시세 (체결량 0)", () => {
+  it("현재가는 바꾸지만 체결 리스트에는 넣지 않는다", () => {
+    const snap: MarketEvent = {
+      type: "tick",
+      tick: { code: "A", time: "090000", price: 500, change: 0, rate: 0, tradeVol: 0, accVol: 9, sentAt: 0 },
+    };
+    const s = applyEvent(applyEvent(EMPTY_MARKET, tick("A", 100)), snap);
+    expect(s.quotes.A?.price).toBe(500);
+    expect(s.trades.A?.map((t) => t.price)).toEqual([100]);
+  });
+});
+
 describe("flashDirection", () => {
   it("오르면 up, 내리면 down, 같거나 처음이면 null", () => {
     expect(flashDirection(100, 110)).toBe("up");

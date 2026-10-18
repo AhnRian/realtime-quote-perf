@@ -18,3 +18,6 @@ next-env.d.ts
 
 # k6 결과 (results.md에 옮겨 적는다)
 load/results/
+
+# KIS REST 접근 토큰 캐시 (비밀)
+.kis-cache/

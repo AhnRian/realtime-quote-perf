@@ -6,7 +6,16 @@ export type Frame = {
   t: number;
   /** KIS 실시간 원문 형식 문자열 */
   raw: string;
+  /** 1이면 스냅샷(구독·복귀 직후 서버가 보내는 최신값). 실시간 메시지와 구분해 "갱신 중" 표시에 쓴다 */
+  s?: 1;
 };
+
+/** 브라우저 → 서버(Mock·KIS 중계) 메시지 (spec 7.1) */
+export type ClientMessage =
+  | { type: "subscribe"; codes: string[] }
+  | { type: "unsubscribe"; codes: string[] }
+  /** 연결은 살아 있는 상태에서 복귀: 최신값 다시 보내기 */
+  | { type: "snapshot"; codes: string[] };
 
 /** 체결 (H0STCNT0) */
 export type Tick = {

@@ -7,7 +7,9 @@
       "Bash(head .env*)",
       "Bash(tail .env*)",
       "Bash(less .env*)",
-      "Bash(grep * .env*)"
+      "Bash(grep * .env*)",
+      "Read(./.kis-cache/**)",
+      "Bash(cat .kis-cache*)"
     ]
   }
 }

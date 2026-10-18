@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TICK_FIELD_COUNT } from "./kis-fields";
-import { parseFrame, parseRaw } from "./parser";
+import { parseClientMessage, parseFrame, parseFrameWithMeta, parseRaw } from "./parser";
 
 /** 46개 필드짜리 체결 레코드. 쓰지 않는 필드는 0으로 채운다 */
 function tickRecord(code: string, price: number, sign: string, change: string, rate: string, vol: number, acc: number) {
@@ -107,6 +107,34 @@ describe("parseRaw - 비정상 입력은 예외 없이 null", () => {
   ])("%s", (_, raw) => {
     expect(() => parseRaw(raw, 0)).not.toThrow();
     expect(parseRaw(raw, 0)).toBeNull();
+  });
+});
+
+describe("parseFrameWithMeta", () => {
+  const raw = () => `0|H0STCNT0|001|${tickRecord("005930", 71900, "2", "500", "0.70", 1, 1).join("^")}`;
+
+  it("s=1이면 스냅샷으로 표시한다", () => {
+    expect(parseFrameWithMeta(JSON.stringify({ t: 1, raw: raw(), s: 1 }))?.snapshot).toBe(true);
+    expect(parseFrameWithMeta(JSON.stringify({ t: 1, raw: raw() }))?.snapshot).toBe(false);
+  });
+});
+
+describe("parseClientMessage", () => {
+  it("구독·해제·스냅샷 요청을 받아들인다", () => {
+    expect(parseClientMessage('{"type":"subscribe","codes":["005930","900001"]}')).toEqual({
+      type: "subscribe",
+      codes: ["005930", "900001"],
+    });
+    expect(parseClientMessage('{"type":"snapshot","codes":[]}')).toEqual({ type: "snapshot", codes: [] });
+  });
+
+  it.each([
+    ["JSON 아님", "x"],
+    ["모르는 type", '{"type":"order","codes":[]}'],
+    ["코드 형식 오류", '{"type":"subscribe","codes":["5930"]}'],
+    ["codes 누락", '{"type":"subscribe"}'],
+  ])("%s이면 null", (_, text) => {
+    expect(parseClientMessage(text)).toBeNull();
   });
 });
 

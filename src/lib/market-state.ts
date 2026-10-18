@@ -19,12 +19,20 @@ export function applyEvent(state: MarketState, event: MarketEvent): MarketState 
     return { ...state, books: { ...state.books, [event.book.code]: event.book } };
   }
   const { tick } = event;
+  const quotes = { ...state.quotes, [tick.code]: tick };
+  // 체결량 0은 REST 스냅샷(현재가만 있음)이라 체결 리스트에 넣지 않는다
+  if (!isTrade(tick)) return { ...state, quotes };
   const prevTrades = state.trades[tick.code] ?? [];
   return {
     ...state,
-    quotes: { ...state.quotes, [tick.code]: tick },
+    quotes,
     trades: { ...state.trades, [tick.code]: [tick, ...prevTrades].slice(0, TRADE_LIMIT) },
   };
+}
+
+/** 실제 체결인지 (REST 스냅샷으로 만든 시세는 체결량 0) */
+export function isTrade(tick: Tick): boolean {
+  return tick.tradeVol > 0;
 }
 
 export type FlashDir = "up" | "down";

@@ -6,7 +6,7 @@ import { OrderBookView } from "@/components/OrderBookView";
 import { BuyButton, OrderDialog, type OrderOpen } from "@/components/OrderTicket";
 import { StockTableHead } from "@/components/StockTable";
 import { changeColor, formatChange, formatInt, formatRate, formatTime } from "@/lib/format";
-import { connectMarket, marketSymbols, marketUrl, type ConnectionStatus } from "@/lib/market-socket";
+import { connectMarket, marketSymbols, marketUrl, type ConnectionState } from "@/lib/market-socket";
 import { MarketStore, storeKey } from "@/lib/market-store";
 import type { SymbolInfo } from "@/lib/mock-generator";
 import { countRowRender, recordLatencies } from "@/lib/perf-recorder";
@@ -25,7 +25,7 @@ export function OptimizedApp({ source, params }: { source: DataSource; params: M
   const [store] = useState(() => new MarketStore());
   const [symbols] = useState(() => marketSymbols(source, params));
   const [selected, setSelected] = useState(symbols[0]?.code ?? "");
-  const [status, setStatus] = useState<ConnectionStatus>("connecting");
+  const [status, setStatus] = useState<ConnectionState>("reconnecting");
 
   useEffect(() => {
     let raf = 0;
@@ -35,7 +35,7 @@ export function OptimizedApp({ source, params }: { source: DataSource; params: M
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-    const disconnect = connectMarket(marketUrl(source, params), {
+    const disconnect = connectMarket(marketUrl(source, params), symbols.map((s) => s.code), {
       onStatus: setStatus,
       onEvents: (events) => {
         for (const event of events) store.enqueue(event);
@@ -45,7 +45,7 @@ export function OptimizedApp({ source, params }: { source: DataSource; params: M
       cancelAnimationFrame(raf);
       disconnect();
     };
-  }, [store, source, params]);
+  }, [store, source, params, symbols]);
 
   const selectedName = symbols.find((s) => s.code === selected)?.name ?? selected;
 

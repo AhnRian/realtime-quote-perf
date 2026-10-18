@@ -9,13 +9,18 @@ import {
   TR_BOOK,
   TR_TICK,
 } from "./kis-fields";
-import type { Frame, Level, MarketEvent, OrderBook, Tick } from "./types";
+import type { ClientMessage, Frame, Level, MarketEvent, OrderBook, Tick } from "./types";
 
 // 파싱 실패는 예외 대신 null로 돌려준다.
 // 실시간 스트림에서 깨진 메시지 하나 때문에 수신 루프 전체가 멈추면 안 되기 때문이다.
 
 /** 웹소켓으로 받은 문자열(내부 프레임 JSON)을 이벤트 목록으로 변환 */
 export function parseFrame(data: string): MarketEvent[] | null {
+  return parseFrameWithMeta(data)?.events ?? null;
+}
+
+/** 이벤트와 함께 스냅샷 여부도 돌려준다 (연결 관리자용) */
+export function parseFrameWithMeta(data: string): { events: MarketEvent[]; snapshot: boolean } | null {
   let frame: unknown;
   try {
     frame = JSON.parse(data);
@@ -23,13 +28,31 @@ export function parseFrame(data: string): MarketEvent[] | null {
     return null;
   }
   if (!isFrame(frame)) return null;
-  return parseRaw(frame.raw, frame.t);
+  const events = parseRaw(frame.raw, frame.t);
+  return events ? { events, snapshot: frame.s === 1 } : null;
 }
 
 function isFrame(value: unknown): value is Frame {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   return typeof v.t === "number" && typeof v.raw === "string";
+}
+
+/** 서버 쪽: 브라우저가 보낸 구독·해제·스냅샷 요청 검증 */
+export function parseClientMessage(text: string): ClientMessage | null {
+  let msg: unknown;
+  try {
+    msg = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (typeof msg !== "object" || msg === null) return null;
+  const m = msg as Record<string, unknown>;
+  if (m.type !== "subscribe" && m.type !== "unsubscribe" && m.type !== "snapshot") return null;
+  if (!Array.isArray(m.codes) || m.codes.length > 100) return null;
+  const codes = m.codes.filter((c): c is string => typeof c === "string" && /^[0-9A-Z]{6}$/.test(c));
+  if (codes.length !== m.codes.length) return null;
+  return { type: m.type, codes };
 }
 
 /** KIS 원문 `암호화여부|TR_ID|데이터건수|필드^필드...` 파싱 */
