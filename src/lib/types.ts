@@ -84,4 +84,7 @@ export type MeasureResult = {
   longTaskMs: number;
   p50: number;
   p95: number;
+  /** 주문 반응 시간 (클릭 → 주문 패널 표시, spec 5.4) */
+  orderP50: number;
+  orderP95: number;
 };

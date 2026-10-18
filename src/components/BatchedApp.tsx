@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { MarketLayout } from "@/components/MarketLayout";
 import { OrderBookView } from "@/components/OrderBookView";
+import { BuyButton, OrderDialog, type OrderOpen } from "@/components/OrderTicket";
 import { StockTable } from "@/components/StockTable";
 import { TradeList } from "@/components/TradeList";
 import {
@@ -32,6 +33,7 @@ export function BatchedApp({ source, params }: { source: DataSource; params: Moc
   const [view, setView] = useState(EMPTY_VIEW);
   const [selected, setSelected] = useState(symbols[0]?.code ?? "");
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
+  const [order, setOrder] = useState<OrderOpen>(null);
   const pendingSentAt = useRef<number[]>([]);
 
   useLayoutEffect(() => {
@@ -98,6 +100,21 @@ export function BatchedApp({ source, params }: { source: DataSource; params: Moc
       }
       orderBook={<OrderBookView book={market.books[selected]} lastPrice={market.quotes[selected]?.price} />}
       trades={<TradeList trades={market.trades[selected] ?? []} />}
+      order={
+        <>
+          <BuyButton onOpen={(t0) => setOrder({ t0 })} />
+          {order && (
+            <OrderDialog
+              key={order.t0}
+              code={selected}
+              name={selectedName}
+              latestPrice={market.quotes[selected]?.price}
+              t0={order.t0}
+              onClose={() => setOrder(null)}
+            />
+          )}
+        </>
+      }
     />
   );
 }

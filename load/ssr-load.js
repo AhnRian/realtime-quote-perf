@@ -60,7 +60,7 @@ export const options = {
   httpTimeout: "5s",
 };
 
-export default function () {
+export default function ssrRequest() {
   const code = CODES[Math.floor(Math.random() * CODES.length)];
   const res = http.get(`${BASE_URL}/stocks/${code}`, { tags: { name: "/stocks/[code]" }, timeout: "5s" });
   check(res, { "200 OK": (r) => r.status === 200 });

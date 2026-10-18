@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { MarketLayout } from "@/components/MarketLayout";
 import { OrderBookView } from "@/components/OrderBookView";
+import { BuyButton, OrderDialog, type OrderOpen } from "@/components/OrderTicket";
 import { StockTable } from "@/components/StockTable";
 import { TradeList } from "@/components/TradeList";
 import { EMPTY_MARKET, applyEvent, flashDirection, type FlashDir } from "@/lib/market-state";
@@ -22,6 +23,8 @@ export function NaiveApp({ source, params }: { source: DataSource; params: MockP
   const [flashes, setFlashes] = useState<Record<string, FlashDir | undefined>>({});
   const [selected, setSelected] = useState(symbols[0]?.code ?? "");
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
+  // 주문 패널 열림도 페이지 state 하나에 둔다 (naive 방식: 열 때 페이지 전체가 다시 렌더)
+  const [order, setOrder] = useState<OrderOpen>(null);
   const lastPrice = useRef<Record<string, number>>({});
   /** 종목별 깜빡임 순번. 더 최근 깜빡임이 시작됐으면 이전 타이머가 지우지 않도록 한다 */
   const flashSeq = useRef<Record<string, number>>({});
@@ -80,6 +83,21 @@ export function NaiveApp({ source, params }: { source: DataSource; params: MockP
       }
       orderBook={<OrderBookView book={market.books[selected]} lastPrice={market.quotes[selected]?.price} />}
       trades={<TradeList trades={market.trades[selected] ?? []} />}
+      order={
+        <>
+          <BuyButton onOpen={(t0) => setOrder({ t0 })} />
+          {order && (
+            <OrderDialog
+              key={order.t0}
+              code={selected}
+              name={selectedName}
+              latestPrice={market.quotes[selected]?.price}
+              t0={order.t0}
+              onClose={() => setOrder(null)}
+            />
+          )}
+        </>
+      }
     />
   );
 }

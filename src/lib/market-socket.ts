@@ -9,6 +9,13 @@ import type { DataSource, MarketEvent, MockParams } from "./types";
 
 export type ConnectionStatus = "connecting" | "open" | "closed";
 
+/** 마지막 시세 수신 시각 (Date.now). 주문 패널의 "가격 지연" 경고에 쓴다 (spec 5.3) */
+let lastMessageAt: number | null = null;
+
+export function getLastMessageAt(): number | null {
+  return lastMessageAt;
+}
+
 export function marketUrl(source: DataSource, params: MockParams): string {
   const host = typeof window === "undefined" ? "localhost" : window.location.hostname;
   return source === "kis" ? `ws://${host}:8788` : `ws://${host}:8787?${toMockQuery(params)}`;
@@ -30,6 +37,7 @@ export function connectMarket(
   ws.onmessage = (e: MessageEvent<unknown>) => {
     if (typeof e.data !== "string") return;
     countMessage();
+    lastMessageAt = Date.now();
     const events = parseFrame(e.data);
     if (events) handlers.onEvents(events);
   };

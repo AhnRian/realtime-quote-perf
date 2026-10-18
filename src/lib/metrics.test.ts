@@ -45,6 +45,7 @@ describe("buildResult", () => {
       longTasks: 12,
       longTaskMs: 1_234.6,
       latencies: [5, 10, 15, 20, 100],
+      orderLatencies: [30, 40, 50, 60, 400],
     });
     expect(result).toEqual({
       mode: "naive",
@@ -58,6 +59,8 @@ describe("buildResult", () => {
       longTaskMs: 1_235,
       p50: 15,
       p95: 100,
+      orderP50: 50,
+      orderP95: 400,
     });
   });
 
@@ -74,8 +77,10 @@ describe("buildResult", () => {
       longTasks: 0,
       longTaskMs: 0,
       latencies: [],
+      orderLatencies: [],
     });
     expect(result.p50).toBe(0);
+    expect(result.orderP95).toBe(0);
     expect(result.p95).toBe(0);
     expect(result.fpsMin).toBe(0);
   });

@@ -1,5 +1,6 @@
 import { buildResult, percentile, perSecond } from "./metrics";
 import type { DataSource, MeasureResult, RenderMode } from "./types";
+import { markAutoClick } from "./order-timing";
 import { VITALS_MAX_SAMPLES, type VitalsPayload } from "./vitals";
 
 // 브라우저 성능 수집기 (모듈 싱글턴).
@@ -71,9 +72,49 @@ const vitalsLatency = new Reservoir(VITALS_MAX_SAMPLES);
 const vitalsOrder = new Reservoir(VITALS_MAX_SAMPLES);
 let vitalsTimer: ReturnType<typeof setInterval> | null = null;
 
-/** 주문 반응 시간 기록 (A2에서 호출) */
+/** 주문 반응 실시간 표시는 최근 20건 기준 (초당 2건 정도라 1초 구간으로는 너무 적다) */
+const LIVE_ORDER_WINDOW = 20;
+let liveOrders: number[] = [];
+let measureOrders: number[] | null = null;
+
+/** 주문 반응 시간 기록 (order-timing.ts에서 호출) */
 export function recordOrderResponse(ms: number): void {
   vitalsOrder.add(ms);
+  liveOrders = [...liveOrders.slice(-(LIVE_ORDER_WINDOW - 1)), ms];
+  measureOrders?.push(ms);
+}
+
+// ── ?autoclick=1: 측정 중 매수 버튼 자동 클릭 (spec 5.4) ──
+// 250ms마다 열기·닫기를 번갈아 → 500ms마다 주문 패널 열기 1회.
+// "원래 실행됐어야 하는 시각"을 T0로 넘겨서, 메인 스레드가 바빠 타이머가 늦게 불린 시간도 반응 시간에 넣는다.
+const AUTOCLICK_STEP_MS = 250;
+let autoclickTimer: ReturnType<typeof setTimeout> | null = null;
+
+function startAutoclick() {
+  const startedAt = performance.now();
+  let step = 0;
+  const run = () => {
+    const scheduledAt = startedAt + step * AUTOCLICK_STEP_MS;
+    if (step % 2 === 0) {
+      const buy = document.querySelector<HTMLButtonElement>("[data-order-buy]");
+      if (buy) {
+        markAutoClick(scheduledAt);
+        buy.click();
+      }
+    } else {
+      document.querySelector<HTMLButtonElement>("[data-order-close]")?.click();
+    }
+    step++;
+    const next = startedAt + step * AUTOCLICK_STEP_MS;
+    autoclickTimer = setTimeout(run, Math.max(0, next - performance.now()));
+  };
+  autoclickTimer = setTimeout(run, AUTOCLICK_STEP_MS);
+}
+
+function stopAutoclick() {
+  if (autoclickTimer) clearTimeout(autoclickTimer);
+  autoclickTimer = null;
+  document.querySelector<HTMLButtonElement>("[data-order-close]")?.click();
 }
 
 export function startVitalsReporting(mode: RenderMode): void {
@@ -100,6 +141,8 @@ export type LiveStats = {
   longTaskMs: number;
   p50: number;
   p95: number;
+  orderP50: number;
+  orderP95: number;
 };
 
 export type MeasureState =
@@ -153,6 +196,8 @@ function start() {
       longTaskMs: Math.round(totals.longTaskMs - prev.longTaskMs),
       p50: Math.round(percentile(liveLatencies, 50)),
       p95: Math.round(percentile(liveLatencies, 95)),
+      orderP50: Math.round(percentile(liveOrders, 50)),
+      orderP95: Math.round(percentile(liveOrders, 95)),
     };
     liveLatencies = [];
     prev = { ...totals };
@@ -185,9 +230,12 @@ function finishMeasure(elapsedMs: number): MeasureResult {
     longTasks: totals.longTasks - ctx.base.longTasks,
     longTaskMs: totals.longTaskMs - ctx.base.longTaskMs,
     latencies: measureLatencies ?? [],
+    orderLatencies: measureOrders ?? [],
   });
   measureCtx = null;
   measureLatencies = null;
+  measureOrders = null;
+  stopAutoclick();
   return result;
 }
 
@@ -198,9 +246,11 @@ export function subscribePerf(listener: Listener): () => void {
 }
 
 /** 30초 측정 시작. 결과는 subscribePerf 리스너로 전달된다 */
-export function startMeasure(mode: RenderMode, source: DataSource, rate: number | null): void {
+export function startMeasure(mode: RenderMode, source: DataSource, rate: number | null, autoclick: boolean): void {
   start();
   measureCtx = { mode, source, rate, startedAt: performance.now(), base: { ...totals }, fpsSamples: [] };
   measureLatencies = [];
+  measureOrders = [];
   measureState = { status: "running", remainingSec: MEASURE_MS / 1000 };
+  if (autoclick) startAutoclick();
 }

@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
 import { MarketLayout } from "@/components/MarketLayout";
 import { OrderBookView } from "@/components/OrderBookView";
+import { BuyButton, OrderDialog, type OrderOpen } from "@/components/OrderTicket";
 import { StockTableHead } from "@/components/StockTable";
 import { changeColor, formatChange, formatInt, formatRate, formatTime } from "@/lib/format";
 import { connectMarket, marketSymbols, marketUrl, type ConnectionStatus } from "@/lib/market-socket";
@@ -80,10 +81,32 @@ export function OptimizedApp({ source, params }: { source: DataSource; params: M
         }
         orderBook={<SelectedOrderBook store={store} code={selected} />}
         trades={<SelectedTrades store={store} code={selected} />}
+        order={<SelectedOrder store={store} code={selected} name={selectedName} />}
       />
     </>
   );
 }
+
+// 주문 패널 열림 상태를 이 작은 컴포넌트에만 둔다 → 열어도 시세 표와 호가창은 다시 렌더되지 않는다
+const SelectedOrder = memo(function SelectedOrder({ store, code, name }: { store: MarketStore; code: string; name: string }) {
+  const [order, setOrder] = useState<OrderOpen>(null);
+  const quote = useStoreValue(store, storeKey.quote(code), () => store.getQuote(code));
+  return (
+    <>
+      <BuyButton onOpen={(t0) => setOrder({ t0 })} />
+      {order && (
+        <OrderDialog
+          key={order.t0}
+          code={code}
+          name={name}
+          latestPrice={quote?.tick.price}
+          t0={order.t0}
+          onClose={() => setOrder(null)}
+        />
+      )}
+    </>
+  );
+});
 
 type RowProps = {
   store: MarketStore;

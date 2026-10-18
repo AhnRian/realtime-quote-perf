@@ -13,9 +13,9 @@ import type { DataSource, RenderMode } from "@/lib/types";
 // 측정 패널 오버레이. 앱 컴포넌트 트리 밖(page.tsx의 형제)에 두어
 // naive 모드의 리렌더에 같이 끌려가 측정값을 왜곡하지 않도록 한다.
 
-type Props = { mode: RenderMode; source: DataSource; rate: number | null };
+type Props = { mode: RenderMode; source: DataSource; rate: number | null; autoclick: boolean };
 
-export function PerfPanel({ mode, source, rate }: Props) {
+export function PerfPanel({ mode, source, rate, autoclick }: Props) {
   const [live, setLive] = useState<LiveStats | null>(null);
   const [measure, setMeasure] = useState<MeasureState>({ status: "idle" });
   const [copied, setCopied] = useState(false);
@@ -50,13 +50,16 @@ export function PerfPanel({ mode, source, rate }: Props) {
         <Stat label="Long Task/s" value={live ? `${live.longTasks} (${live.longTaskMs}ms)` : undefined} />
         <Stat label="지연 p50" value={live ? `${live.p50}ms` : undefined} />
         <Stat label="지연 p95" value={live ? `${live.p95}ms` : undefined} />
+        <Stat label="주문 반응 p50" value={live ? `${live.orderP50}ms` : undefined} />
+        <Stat label="주문 반응 p95" value={live ? `${live.orderP95}ms` : undefined} />
       </dl>
+      {autoclick && <p className="mt-1 text-neutral-500">autoclick: 측정 중 0.5초마다 매수 패널 자동 열기</p>}
       <button
         type="button"
         disabled={measure.status === "running"}
         onClick={() => {
           setCopied(false);
-          startMeasure(mode, source, rate);
+          startMeasure(mode, source, rate, autoclick);
           setMeasure({ status: "running", remainingSec: 30 });
         }}
         className="mt-3 w-full rounded bg-neutral-700 py-1 hover:bg-neutral-600 disabled:opacity-50"

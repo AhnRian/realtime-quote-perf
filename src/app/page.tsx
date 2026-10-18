@@ -21,7 +21,12 @@ export default async function Page({
       {mode === "batched" && <BatchedApp source={source} params={params} />}
       {mode === "optimized" && <OptimizedApp source={source} params={params} />}
       {/* 측정 패널은 앱 트리 밖에 둔다 (앱 리렌더에 영향받지 않도록) */}
-      <PerfPanel mode={mode} source={source} rate={source === "mock" ? params.rate : null} />
+      <PerfPanel
+        mode={mode}
+        source={source}
+        rate={source === "mock" ? params.rate : null}
+        autoclick={query.get("autoclick") === "1"}
+      />
     </>
   );
 }

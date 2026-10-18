@@ -35,6 +35,8 @@ export type MeasureInput = {
   longTasks: number;
   longTaskMs: number;
   latencies: readonly number[];
+  /** 주문 반응 시간 샘플 (spec 5.4) */
+  orderLatencies: readonly number[];
 };
 
 export function buildResult(input: MeasureInput): MeasureResult {
@@ -50,5 +52,7 @@ export function buildResult(input: MeasureInput): MeasureResult {
     longTaskMs: Math.round(input.longTaskMs),
     p50: Math.round(percentile(input.latencies, 50)),
     p95: Math.round(percentile(input.latencies, 95)),
+    orderP50: Math.round(percentile(input.orderLatencies, 50)),
+    orderP95: Math.round(percentile(input.orderLatencies, 95)),
   };
 }

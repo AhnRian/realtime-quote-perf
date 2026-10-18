@@ -19,9 +19,11 @@ type Props = {
   list: ReactNode;
   orderBook: ReactNode;
   trades: ReactNode;
+  /** 매수 버튼 (+ 열렸을 때 주문 확인 패널) */
+  order: ReactNode;
 };
 
-export function MarketLayout({ mode, source, rate, status, selectedName, list, orderBook, trades }: Props) {
+export function MarketLayout({ mode, source, rate, status, selectedName, list, orderBook, trades, order }: Props) {
   return (
     <div className="flex h-screen flex-col">
       <header className="flex items-center gap-3 border-b border-neutral-800 px-4 py-2">
@@ -38,7 +40,10 @@ export function MarketLayout({ mode, source, rate, status, selectedName, list, o
       <div className="flex min-h-0 flex-1">
         <section className="flex-1 overflow-auto px-4">{list}</section>
         <aside className="flex w-96 flex-col border-l border-neutral-800">
-          <h2 className="px-3 pt-2 text-xs text-neutral-400">{selectedName} 호가</h2>
+          <div className="flex items-center justify-between px-3 pt-2">
+            <h2 className="text-xs text-neutral-400">{selectedName} 호가</h2>
+            {order}
+          </div>
           <div className="px-3">{orderBook}</div>
           <h2 className="px-3 pt-3 text-xs text-neutral-400">최근 체결</h2>
           <div className="min-h-0 flex-1 overflow-auto px-3">{trades}</div>
