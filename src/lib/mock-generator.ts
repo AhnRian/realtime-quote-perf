@@ -23,6 +23,11 @@ const VIRTUAL_MS_PER_MESSAGE = 10;
 const MARKET_OPEN_SEC = 9 * 3600;
 /** 상·하한가 ±30% */
 const LIMIT_RATIO = 0.3;
+/** 인기 종목 상위 5개가 메시지의 약 60% (spec 5.1) */
+export const HOT_COUNT = 5;
+const HOT_RATIO = 0.5; // 나머지 50%도 균등 선택이라 상위 5개에 일부 더 간다 → 합계 약 60%
+/** multi 모드에서 체결 중 묶음으로 보내는 비율 */
+const MULTI_RATIO = 0.3;
 
 export type SymbolInfo = { code: string; name: string };
 
@@ -60,8 +65,8 @@ export type MockGenerator = {
   symbols: SymbolInfo[];
   /** 접속 직후 화면을 채우기 위한 전 종목 체결 1건 + 호가 1건 */
   snapshot(): string[];
-  /** 다음 메시지 1건 (KIS 원문 형식) */
-  next(): string;
+  /** 다음 메시지 1건 (KIS 원문 형식). multi: 일부 체결을 2~3건 묶음으로 보낸다 (burst 구간) */
+  next(opts?: { multi?: boolean }): string;
 };
 
 export function createMockGenerator(options: { seed: number; symbols: number }): MockGenerator {
@@ -95,7 +100,8 @@ export function createMockGenerator(options: { seed: number; symbols: number }):
     if (price <= upper && price >= lower && price > 0) s.price = price;
   }
 
-  function tickRaw(s: SymbolState): string {
+  /** 체결 레코드 1건의 필드 46개 */
+  function tickFields(s: SymbolState): string[] {
     movePrice(s);
     const tradeVol = 1 + Math.floor(rng() ** 3 * 2_000);
     s.accVol += tradeVol;
@@ -113,7 +119,25 @@ export function createMockGenerator(options: { seed: number; symbols: number }):
     f[TICK_FIELD.TRADE_VOL] = String(tradeVol);
     f[TICK_FIELD.ACC_VOL] = String(s.accVol);
     messageIndex++;
-    return `0|${TR_TICK}|001|${f.join("^")}`;
+    return f;
+  }
+
+  function tickRaw(s: SymbolState): string {
+    return `0|${TR_TICK}|001|${tickFields(s).join("^")}`;
+  }
+
+  /** 다건 체결: 레코드 여러 개를 ^로 이어 붙이고 데이터건수를 적는다 (KIS가 체결이 몰릴 때 보내는 형식) */
+  function multiTickRaw(records: SymbolState[]): string {
+    const count = String(records.length).padStart(3, "0");
+    return `0|${TR_TICK}|${count}|${records.flatMap((s) => tickFields(s)).join("^")}`;
+  }
+
+  /** 인기 종목 쏠림: 메시지의 HOT_RATIO가 상위 HOT_COUNT 종목에 간다 (장 초반 재현) */
+  function pickSymbol(): SymbolState {
+    const hot = states.length > HOT_COUNT && rng() < HOT_RATIO;
+    const s = hot ? states[pick(HOT_COUNT)] : states[pick(states.length)];
+    if (!s) throw new Error("종목이 없음");
+    return s;
   }
 
   function bookRaw(s: SymbolState): string {
@@ -141,11 +165,15 @@ export function createMockGenerator(options: { seed: number; symbols: number }):
     snapshot() {
       return states.flatMap((s) => [tickRaw(s), bookRaw(s)]);
     },
-    next() {
+    next(opts = {}) {
       const isTick = rng() < TICK_RATIO;
-      const s = states[pick(states.length)];
-      if (!s) throw new Error("종목이 없음");
-      return isTick ? tickRaw(s) : bookRaw(s);
+      if (!isTick) return bookRaw(pickSymbol());
+      if (opts.multi && rng() < MULTI_RATIO) {
+        // 2~3건 묶음
+        const n = 2 + pick(2);
+        return multiTickRaw(Array.from({ length: n }, pickSymbol));
+      }
+      return tickRaw(pickSymbol());
     },
   };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createMockGenerator, symbolName } from "./mock-generator";
+import { HOT_COUNT, createMockGenerator, symbolName } from "./mock-generator";
 import { parseRaw } from "./parser";
 import { tickSize } from "./tick-size";
 import type { MarketEvent } from "./types";
@@ -66,6 +66,34 @@ describe("mock-generator", () => {
       expect([...asks].sort((a, b) => a - b)).toEqual(asks);
       expect([...bids].sort((a, b) => b - a)).toEqual(bids);
     }
+  });
+
+  it("인기 종목 상위 5개가 메시지의 약 60%를 차지한다", () => {
+    const g = createMockGenerator({ seed: 42, symbols: 30 });
+    const hotCodes = new Set(g.symbols.slice(0, HOT_COUNT).map((s) => s.code));
+    const events = parseAll(Array.from({ length: 10_000 }, () => g.next()));
+    const codeOf = (e: MarketEvent) => (e.type === "tick" ? e.tick.code : e.book.code);
+    const hotRatio = events.filter((e) => hotCodes.has(codeOf(e))).length / events.length;
+    expect(hotRatio).toBeGreaterThan(0.55);
+    expect(hotRatio).toBeLessThan(0.65);
+  });
+
+  it("multi 옵션이면 일부 체결이 2~3건 다건 메시지로 오고, 파서가 모두 풀어낸다", () => {
+    const g = createMockGenerator({ seed: 42, symbols: 30 });
+    const raws = Array.from({ length: 2_000 }, () => g.next({ multi: true }));
+    const counts = raws.filter((r) => r.startsWith("0|H0STCNT0|")).map((r) => r.split("|")[2]);
+    expect(counts).toContain("002");
+    expect(counts).toContain("003");
+    expect(counts.every((c) => ["001", "002", "003"].includes(c ?? ""))).toBe(true);
+    const ticks = parseAll(raws).filter((e) => e.type === "tick");
+    const expected = counts.reduce((sum, c) => sum + Number(c), 0);
+    expect(ticks).toHaveLength(expected);
+  });
+
+  it("multi 옵션이 없으면 다건 메시지를 만들지 않는다", () => {
+    const g = createMockGenerator({ seed: 42, symbols: 30 });
+    const raws = Array.from({ length: 2_000 }, () => g.next());
+    expect(raws.every((r) => r.split("|")[2] === "001")).toBe(true);
   });
 
   it("종목명을 코드로 찾는다", () => {
