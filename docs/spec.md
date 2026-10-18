@@ -158,6 +158,10 @@ type ConnectionState = 'connected' | 'refreshing' | 'reconnecting' | 'disconnect
 
 ### 6.3 지표 노출
 - `/api/metrics`: Prometheus 형식 (기본 프로세스 지표 + SSR 렌더 시간 히스토그램 + 요청 수 + `/api/vitals`로 받은 브라우저 지표)
+  - App Router에는 요청별 렌더 시간 훅이 없어 `pnpm start`를 커스텀 서버(`server/next-server.ts`)로 바꾸고, 요청 시작~응답 종료를 `http_request_duration_seconds{route}`로 잰다 (SSR 렌더 포함)
+  - 지표 저장소는 `globalThis`에 하나만 둔다 (커스텀 서버와 Next 번들이 같은 모듈을 따로 불러오기 때문)
+  - 경로 라벨은 `/stocks/[code]`처럼 패턴으로 묶는다 (종목 코드별 라벨은 시계열 폭증)
+- `/api/vitals`: 브라우저가 5초마다 표시 지연·주문 반응 샘플(저수지 샘플링, 최대 1,000개)을 보내면 모드별 히스토그램에 기록
 - `docker-compose.monitoring.yml`: Prometheus + Grafana, 대시보드 JSON은 `monitoring/grafana/`에 저장
 - 대시보드 패널: SSR 응답 p95, 초당 요청 수, 에러율, CPU·메모리, 이벤트 루프 지연, 브라우저 주문 반응 p95
 

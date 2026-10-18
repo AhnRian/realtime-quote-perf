@@ -1,5 +1,6 @@
 import { buildResult, percentile, perSecond } from "./metrics";
 import type { DataSource, MeasureResult, RenderMode } from "./types";
+import { VITALS_MAX_SAMPLES, type VitalsPayload } from "./vitals";
 
 // 브라우저 성능 수집기 (모듈 싱글턴).
 // 렌더·메시지 카운터는 렌더 경로에서 호출되므로 숫자 증가만 하고, 계산은 1초마다 한 번 한다.
@@ -31,7 +32,64 @@ export function recordLatencies(sentAts: readonly number[]): void {
     const latency = now - sentAt;
     if (liveLatencies.length < LIVE_LATENCY_LIMIT) liveLatencies.push(latency);
     measureLatencies?.push(latency);
+    vitalsLatency.add(latency);
   }
+}
+
+// ── /api/vitals 전송 (spec 5.4, 6.3) ──
+// 5초 동안 모은 샘플을 서버로 보내 Prometheus 히스토그램에 쌓는다.
+// rate 500이면 5초에 지연 샘플이 수천 개라, 저수지 샘플링으로 상한 안에서 고르게 뽑는다.
+
+const VITALS_INTERVAL_MS = 5_000;
+
+/** 저수지 샘플링: 몇 개가 들어오든 최대 limit개를 고르게 남긴다 */
+export class Reservoir {
+  private items: number[] = [];
+  private seen = 0;
+
+  constructor(private readonly limit: number) {}
+
+  add(value: number): void {
+    this.seen++;
+    if (this.items.length < this.limit) {
+      this.items.push(value);
+      return;
+    }
+    const j = Math.floor(Math.random() * this.seen);
+    if (j < this.limit) this.items[j] = value;
+  }
+
+  take(): number[] {
+    const taken = this.items;
+    this.items = [];
+    this.seen = 0;
+    return taken;
+  }
+}
+
+const vitalsLatency = new Reservoir(VITALS_MAX_SAMPLES);
+const vitalsOrder = new Reservoir(VITALS_MAX_SAMPLES);
+let vitalsTimer: ReturnType<typeof setInterval> | null = null;
+
+/** 주문 반응 시간 기록 (A2에서 호출) */
+export function recordOrderResponse(ms: number): void {
+  vitalsOrder.add(ms);
+}
+
+export function startVitalsReporting(mode: RenderMode): void {
+  if (vitalsTimer) return;
+  vitalsTimer = setInterval(() => {
+    const payload: VitalsPayload = { mode, order: vitalsOrder.take(), latency: vitalsLatency.take() };
+    if (payload.order.length === 0 && payload.latency.length === 0) return;
+    void fetch("/api/vitals", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {
+      // 지표 전송 실패는 화면 동작에 영향을 주지 않도록 무시한다
+    });
+  }, VITALS_INTERVAL_MS);
 }
 
 export type LiveStats = {

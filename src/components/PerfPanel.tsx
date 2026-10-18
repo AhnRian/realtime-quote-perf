@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { startMeasure, subscribePerf, type LiveStats, type MeasureState } from "@/lib/perf-recorder";
+import {
+  startMeasure,
+  startVitalsReporting,
+  subscribePerf,
+  type LiveStats,
+  type MeasureState,
+} from "@/lib/perf-recorder";
 import type { DataSource, RenderMode } from "@/lib/types";
 
 // 측정 패널 오버레이. 앱 컴포넌트 트리 밖(page.tsx의 형제)에 두어
@@ -22,6 +28,9 @@ export function PerfPanel({ mode, source, rate }: Props) {
       }),
     [],
   );
+
+  // 브라우저 지표를 Grafana로 보내기 위해 /api/vitals에 주기적으로 전송
+  useEffect(() => startVitalsReporting(mode), [mode]);
 
   const resultJson = measure.status === "done" ? JSON.stringify(measure.result) : null;
 

@@ -71,9 +71,9 @@
 - [x] `API_MOCK=1`이면 fixtures + 50ms 지연, 백엔드 호출 없음 (테스트)
 
 ### B2. 지표 노출 + 모니터링 ⭐ (spec 6.3)
-- [ ] `/api/metrics` (SSR 렌더 시간 히스토그램, 요청 수, 프로세스 지표)
-- [ ] `/api/vitals`로 브라우저 주문 반응·표시 지연 수집
-- [ ] `docker-compose.monitoring.yml`로 Prometheus + Grafana 실행, 대시보드 JSON 저장
+- [x] `/api/metrics` (SSR 렌더 시간 히스토그램, 요청 수, 프로세스 지표)
+- [x] `/api/vitals`로 브라우저 주문 반응·표시 지연 수집 (주문 반응 샘플은 A2에서 연결)
+- [x] `docker-compose.monitoring.yml`로 Prometheus + Grafana 실행, 대시보드 JSON 저장
 - [ ] 대시보드 스크린샷
 
 ### B3. k6 SSR 부하 테스트 ⭐ (spec 6.4)

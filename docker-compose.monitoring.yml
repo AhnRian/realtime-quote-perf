@@ -1,0 +1,29 @@
+# Prometheus + Grafana (spec 6.3)
+# 실행: docker compose -f docker-compose.monitoring.yml up -d
+# Grafana: http://localhost:3001 (로그인 없이 보기), Prometheus: http://localhost:9090
+# Next 서버는 호스트에서 `pnpm start`(포트 3000)로 실행하고, 컨테이너는 host.docker.internal로 수집한다.
+services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  grafana:
+    image: grafana/grafana:12.1.1
+    ports:
+      - "3001:3000"
+    environment:
+      # 로컬 데모용: 로그인 없이 대시보드를 볼 수 있게 한다
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/kis-mts.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
