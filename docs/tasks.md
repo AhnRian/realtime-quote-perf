@@ -74,11 +74,11 @@
 - [x] `/api/metrics` (SSR 렌더 시간 히스토그램, 요청 수, 프로세스 지표)
 - [x] `/api/vitals`로 브라우저 주문 반응·표시 지연 수집 (주문 반응 샘플은 A2에서 연결)
 - [x] `docker-compose.monitoring.yml`로 Prometheus + Grafana 실행, 대시보드 JSON 저장
-- [ ] 대시보드 스크린샷
+- [x] 대시보드 스크린샷 (`docs/images/b3-grafana-process-ramp.png`)
 
 ### B3. k6 SSR 부하 테스트 ⭐ (spec 6.4)
-- [ ] `load/ssr-load.js`, 기준 p95 < 500ms, 에러율 < 1%
-- [ ] 컨테이너 1개 한계 찾기, Grafana로 같이 관찰, `results.md` 기록
+- [x] `load/ssr-load.js`, 기준 p95 < 500ms, 에러율 < 1%
+- [x] 컨테이너 1개 한계 찾기, Grafana로 같이 관찰, `results.md` 기록 (호스트 프로세스 ~400, CPU 1 컨테이너 ~150 req/s)
 
 ### B4. 컨테이너 수 늘려 비교 ○
 - [ ] Docker로 Next 서버 2~3개 + 로드밸런서, 같은 부하에서 처리량 비교

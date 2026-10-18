@@ -6,4 +6,9 @@ scrape_configs:
   - job_name: next
     metrics_path: /api/metrics
     static_configs:
-      - targets: ["host.docker.internal:3000"]
+      # 3000: 호스트에서 pnpm start, 3100~3102: Docker 컨테이너 (B3·B4)
+      - targets:
+          - host.docker.internal:3000
+          - host.docker.internal:3100
+          - host.docker.internal:3101
+          - host.docker.internal:3102
