@@ -19,6 +19,7 @@ pnpm install
 pnpm build && pnpm start          # Next 서버 (커스텀 서버, 포트 3000) — 성능 측정은 반드시 프로덕션 빌드
 pnpm mock                         # Mock 시세 서버 ws://localhost:8787
 pnpm relay                        # KIS 중계 서버 ws://localhost:8788 (.env.local에 KIS_APP_KEY, KIS_APP_SECRET)
+# 선택: .env.local에 NEXT_PUBLIC_SENTRY_DSN을 넣으면 브라우저 에러를 Sentry로 보낸다 (없으면 꺼짐)
 pnpm test && pnpm typecheck       # 단위 테스트 124개
 
 # B. SSR 부하

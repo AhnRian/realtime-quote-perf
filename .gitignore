@@ -21,3 +21,6 @@ load/results/
 
 # KIS REST 접근 토큰 캐시 (비밀)
 .kis-cache/
+
+# 개인 진행 가이드 (공개하지 않음)
+docs/guide.md
